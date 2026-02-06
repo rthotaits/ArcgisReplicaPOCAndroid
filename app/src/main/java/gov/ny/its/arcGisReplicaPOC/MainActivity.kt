@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,11 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.arcgismaps.toolkit.authentication.Authenticator
-import gov.ny.its.arcGisReplicaPOC.ui.theme.FacilityMap
-import gov.ny.its.arcGisReplicaPOC.ui.theme.MapWithFeatureScreen2
-import gov.ny.its.arcGisReplicaPOC.ui.theme.MapWithFeatureScreen3
-import gov.ny.its.arcGisReplicaPOC.ui.theme.MapWithFeatureScreen4
-import gov.ny.its.arcGisReplicaPOC.ui.theme.MapWithFeatureScreen5
 import gov.ny.its.arcGisReplicaPOC.ui.theme.credentialauth.AuthBootstrapper
 import gov.ny.its.arcGisReplicaPOC.ui.theme.credentialauth.AuthMode
 import gov.ny.its.arcGisReplicaPOC.ui.theme.node.AppNavRoot
@@ -68,8 +62,6 @@ fun AppRoot(authMode: AuthMode) {
         when {
             error != null -> Text("Auth failed: $error", modifier = Modifier.padding(16.dp))
             !ready -> CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
-           // else -> BasicMapScreen(authMode = authMode)
-           // else -> FacilityMap(authMode = authMode)
           //  else -> MapWithFeatureScreen3(authMode)
             else -> AppNavRoot()
         }
