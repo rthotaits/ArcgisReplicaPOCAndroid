@@ -19,16 +19,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
-import com.arcgismaps.data.ArcGISFeature
-import com.arcgismaps.data.Geodatabase
-import com.arcgismaps.data.QueryParameters
-import com.arcgismaps.geometry.Geometry
-import com.arcgismaps.geometry.GeometryEngine
-import com.arcgismaps.mapping.MobileMapPackage
-import com.arcgismaps.mapping.Viewpoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
 @Composable
 fun AppNavRoot() {
@@ -38,7 +30,7 @@ fun AppNavRoot() {
 }
 
 /**
- * Your first screen (parks list).
+ * first screen (parks list).
  */
 @Composable
 fun ParksListScreen(
@@ -85,82 +77,6 @@ fun LoadParksOnce(
     var loading by remember { mutableStateOf(true) }
     var parks by remember { mutableStateOf<List<UniqueParkViewPoint>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
-
-//    LaunchedEffect(Unit) {
-//        withContext(Dispatchers.IO) {
-//            try {
-//                Log.d("PARKS_LOAD", " Checking for MMPK and GDB files in internal storage")
-//                // ensure mmpk exists (some workflows require it even if we only use gdb here)
-//                val mmpkFile = File(context.filesDir, mmpkFileName)
-//                if (!mmpkFile.exists()) {
-//                    Log.d("PARKS_LOAD", "-> Copying $mmpkFileName from assets...")
-//                    context.assets.open(mmpkFileName).use { it.copyTo(mmpkFile.outputStream()) }
-//                }
-//                MobileMapPackage(mmpkFile.absolutePath).load().getOrThrow()
-//
-//                // ensure park gdb exists
-//                val gdbFile = File(context.filesDir, parkGdbFileName)
-//                if (!gdbFile.exists()) {
-//                    Log.d("PARKS_LOAD", "-> Copying $parkGdbFileName from assets...")
-//                    context.assets.open(parkGdbFileName).use { it.copyTo(gdbFile.outputStream()) }
-//                }
-//
-//                //establish database connection - laod geodatabase
-//                Log.d("PARKS_LOAD", "opening Geodatabase connection")
-//                val gdb = Geodatabase(gdbFile.absolutePath)
-//                gdb.load().getOrThrow()
-//
-//                //grab the park boundaries
-//                val table = gdb.featureTables.firstOrNull()
-//                    ?: error("No feature tables in $parkGdbFileName")
-//                Log.d("results table","results: ${table.tableName}")
-//
-//                val params = QueryParameters().apply {
-//                    whereClause = "Category not in ('COE' , 'Other', 'Conservation Easement', ' ')"
-//                }
-//                Log.d("PARKS_LOAD", "Executing Query: ${params.whereClause}")
-//
-//                val result = table.queryFeatures(params).getOrThrow()
-//                val features: List<ArcGISFeature> = result.toList().mapNotNull { it as? ArcGISFeature }
-//                Log.d("features result#####", "Query complete. Found ${features.count()} valid feature records.")
-//
-//                val grouped = features.groupBy { val it1 = it
-//                   it1.attributes["label"]?.toString().orEmpty() }
-//                Log.d("results", "Grouped into ${grouped.size} unique Park Labels")
-//
-//                Log.d("PARKS_LOAD", "calculating Viewpoints (Merging Geometries)")
-//                val temp = grouped.entries.mapNotNull { entry ->
-//                    val name = entry.key
-//                    if (name.isBlank()) return@mapNotNull null
-//                    val geometries: List<Geometry> = entry.value.mapNotNull { it.geometry }
-//                    if (geometries.isEmpty()) return@mapNotNull null
-//
-//                    //merge all polygon chunks in to one boundary
-//                    val merged: Geometry? = geometries.drop(1).fold(geometries.first()) { acc, g ->
-//                        GeometryEngine.union(acc, g) ?: acc
-//                    }
-//
-//                    val extent = merged?.extent ?: return@mapNotNull null
-//
-//                    UniqueParkViewPoint(name, Viewpoint(extent))
-//                }.sortedBy { it.name }
-//
-//                //push to UI
-//                withContext(Dispatchers.Main) {
-//                    Log.d("PARKS_LOAD", "Loading complete. Pushing ${temp.size} parks to UI list.")
-//                    parks = temp
-//                    error = null
-//                    loading = false
-//                }
-//            } catch (e: Exception) {
-//                Log.e("PARKS_LOAD", "Failed", e)
-//                withContext(Dispatchers.Main) {
-//                    error = e.message ?: "Unknown error"
-//                    loading = false
-//                }
-//            }
-//        }
-//    }
 
     LaunchedEffect(Unit) {
         loading = true

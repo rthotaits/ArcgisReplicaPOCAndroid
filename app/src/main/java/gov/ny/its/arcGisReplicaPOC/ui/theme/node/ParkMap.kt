@@ -28,7 +28,6 @@ import com.arcgismaps.tasks.geodatabase.SyncDirection
 import com.arcgismaps.data.ArcGISFeature
 import com.arcgismaps.data.Geodatabase
 import com.arcgismaps.data.QueryParameters
-import com.arcgismaps.geometry.Geometry
 import com.arcgismaps.geometry.GeometryEngine
 import com.arcgismaps.data.FeatureQueryResult
 import com.arcgismaps.geometry.AngularUnit
@@ -39,8 +38,6 @@ import com.arcgismaps.location.LocationDisplayAutoPanMode
 import com.arcgismaps.location.SimulatedLocationDataSource
 import com.arcgismaps.location.SimulationParameters
 import com.arcgismaps.mapping.ArcGISMap
-import com.arcgismaps.mapping.MobileMapPackage
-import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.mapping.layers.FeatureLayer
 import com.arcgismaps.mapping.symbology.SimpleFillSymbol
 import com.arcgismaps.mapping.symbology.SimpleFillSymbolStyle
@@ -54,12 +51,16 @@ import com.arcgismaps.toolkit.geoviewcompose.MapViewProxy
 import com.arcgismaps.toolkit.geoviewcompose.rememberLocationDisplay
 import gov.ny.its.arcGisReplicaPOC.ui.theme.UniqueParkViewPoint
 import gov.ny.its.arcGisReplicaPOC.ui.theme.credentialauth.AuthMode
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Instant
 
+
+// Holds the unique park name and viewpint
+//data class UniqueParkViewPoint(val name: String, val viewpoint: Viewpoint)
+
+// 1. load offline map 2. Load local geo databases (parks boundaries, trails, facilities, huntiing 3. Builds featureLayers from the geodatabases 4. computes unique park-level viewpoints by merging park boundaries
+//5. supports identity on tap adn full geodatabase sync
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParkMap(

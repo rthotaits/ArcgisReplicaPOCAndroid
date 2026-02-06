@@ -11,8 +11,6 @@ import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.MobileMapPackage
 import com.arcgismaps.mapping.Viewpoint
 import com.arcgismaps.mapping.layers.FeatureLayer
-import kotlinx.coroutines.withTimeout
-import com.arcgismaps.mapping.symbology.Renderer
 import gov.ny.its.arcGisReplicaPOC.ui.theme.UniqueParkViewPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
