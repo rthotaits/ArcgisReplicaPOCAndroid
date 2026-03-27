@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -42,22 +43,32 @@ fun ParksListScreen(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(parks, key = { it.name }) { park ->
-                Log.d("count of parks", "parkscount: ${parks.size}")
-                Log.d("list of parks####", "parks list: $park.name")
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                        .clickable { onParkClick(park) },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Text(
-                        text = park.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(16.dp)
-                    )
+        Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "Count of Parks: ${parks.size}",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 20.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(parks, key = { it.name }) { park ->
+                    Log.d("count of parks", "parkscount: ${parks.size}")
+                    Log.d("list of parks####", "parks list: $park.name")
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clickable { onParkClick(park) },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Text(
+                            text = park.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
                 }
             }
         }
@@ -70,7 +81,7 @@ fun ParksListScreen(
 @Composable
 fun LoadParksOnce(
     mmpkFileName: String = "nys_offline.mmpk",
-    parkGdbFileName: String = "parkBoundriesQA.geodatabase",
+    parkGdbFileName: String = "boundaryQA.geodatabase",
     content: @Composable (parks: List<UniqueParkViewPoint>) -> Unit
 ) {
     val context = LocalContext.current

@@ -59,11 +59,16 @@ suspend fun loadOfflineMapAndLayers(
         geodatabase.load().getOrThrow()
 
         geodatabase.featureTables.forEach { table ->
+            Log.d("ArcGIS", "Loaded GDB: $gdbName")
+            Log.d("ArcGIS", "list of tables${geodatabase.featureTables.map { it.tableName }}")
 
+            geodatabase.featureTables.forEach { table ->
+                Log.d("ArcGIS", "Table inside $gdbName -> ${table.tableName}")
+            }
             // Build park viewpoints once from the parkBoundries gdb
-            if (gdbName.contains("parkboundries", ignoreCase = true)) {
+            if (table.tableName.equals("NYS_Park_Polygon", ignoreCase = true)) {
                 val params = QueryParameters().apply {
-                    whereClause = "Category not in ('COE' , 'Other', 'Conservation Easement', ' ')"
+                    whereClause = "label IS NOT NULL AND label <> '' AND label <> ' '"
                 }
 
                 val result = table.queryFeatures(params).getOrThrow()
@@ -89,7 +94,7 @@ suspend fun loadOfflineMapAndLayers(
                 Log.d(tag, "Computed park viewpoints: ${parkViewpoints.size}")
             }
 
-            if (gdbName.contains("trailsQA", ignoreCase = true)) {
+            if (gdbName.contains("trailsQA1", ignoreCase = true)) {
                 val blaze1Layer = FeatureLayer.createWithFeatureTable(table)
                 blaze1Layer.renderer = TrailRendererHelper.create("Blaze", true)
                 localMap.operationalLayers.add(blaze1Layer)

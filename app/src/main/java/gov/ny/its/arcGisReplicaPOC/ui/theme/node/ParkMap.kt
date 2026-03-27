@@ -1,6 +1,9 @@
 package gov.ny.its.arcGisReplicaPOC.ui.theme.node
 
 import android.Manifest.permission
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,9 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import com.arcgismaps.Color
 import com.arcgismaps.tasks.geodatabase.SyncDirection
 import com.arcgismaps.data.ArcGISFeature
+import com.arcgismaps.data.Feature
 import com.arcgismaps.data.Geodatabase
 import com.arcgismaps.data.QueryParameters
 import com.arcgismaps.geometry.GeometryEngine
@@ -39,6 +44,7 @@ import com.arcgismaps.location.SimulatedLocationDataSource
 import com.arcgismaps.location.SimulationParameters
 import com.arcgismaps.mapping.ArcGISMap
 import com.arcgismaps.mapping.layers.FeatureLayer
+import com.arcgismaps.mapping.symbology.PictureMarkerSymbol
 import com.arcgismaps.mapping.symbology.SimpleFillSymbol
 import com.arcgismaps.mapping.symbology.SimpleFillSymbolStyle
 import com.arcgismaps.mapping.symbology.SimpleLineSymbol
@@ -67,8 +73,8 @@ fun ParkMap(
     authMode: AuthMode = AuthMode.TOKEN_CREDENTIAL,
     mmpkFileName: String = "nys_offline.mmpk",
     gdbFileNames: List<String> = listOf(
-        "parkBoundriesQA.geodatabase",
-        "trailsQA.geodatabase",
+        "boundaryQA.geodatabase",
+        "trailsQA1.geodatabase",
         "facility_featuresQA1.geodatabase",
         "huntingQA.geodatabase"
     ),
@@ -87,7 +93,11 @@ fun ParkMap(
     var hasLocationPermission by remember { mutableStateOf(false) }
     val locationDisplay = rememberLocationDisplay()
     val bufferOverlay = remember { GraphicsOverlay() }
-    val alleganymock = remember { com.arcgismaps.geometry.Point(-78.782489, 41.999191, SpatialReference.wgs84()) }
+    val facilityIconOverlay = remember { GraphicsOverlay() }
+    val alleganymock =
+        remember { com.arcgismaps.geometry.Point(-78.782489, 41.999191, SpatialReference.wgs84()) }
+        //green lakes state park
+   // remember { com.arcgismaps.geometry.Point(-75.9713, 43.0598, SpatialReference.wgs84()) }
     var totalNearbyCount by remember { mutableStateOf(0) }
 
 
@@ -132,7 +142,8 @@ fun ParkMap(
             // Log the results sorted by distance
             Log.d("Arcgis", "--- Closest Amenities (Total: ${featuresWithDistance.size}) ---")
             featuresWithDistance.forEach { (feature, distance) ->
-                val name = feature.attributes["Sub_Asset"] ?: feature.attributes["Name"] ?: "Unknown"
+                val name =
+                    feature.attributes["Sub_Asset"] ?: feature.attributes["Name"] ?: "Unknown"
                 // Formatting to 2 decimal places
                 val formattedDistance = "%.2f".format(distance)
                 Log.d("Arcgis", "Feature: $name is $formattedDistance feet away")
@@ -153,7 +164,8 @@ fun ParkMap(
             layers.forEach { layer ->
                 // Using "transportation" or "trails" to match your log: trailsqa_transportationlocal
                 if (layer.name.contains("trails", ignoreCase = true) ||
-                    layer.name.contains("transportation", ignoreCase = true)) {
+                    layer.name.contains("transportation", ignoreCase = true)
+                ) {
 
                     Log.d("Arcgis", "Targeting Trail Layer: ${layer.name}")
                     val trails = queryAmenitiesInRange(currentPos, layer.featureTable!!)
@@ -171,7 +183,8 @@ fun ParkMap(
                 val trailGeometry = trail.geometry ?: return@mapNotNull null
 
                 // Find nearest point on the line
-                val nearestSearchResult = GeometryEngine.nearestCoordinate(trailGeometry, currentPos)
+                val nearestSearchResult =
+                    GeometryEngine.nearestCoordinate(trailGeometry, currentPos)
                 val pointOnTrail = nearestSearchResult?.coordinate ?: return@mapNotNull null
 
                 val geodeticResult = GeometryEngine.distanceGeodeticOrNull(
@@ -188,7 +201,8 @@ fun ParkMap(
 
             Log.d("ArcGIS", "--- Sorted Trails (Total: ${trailsWithDistance.size}) ---")
             trailsWithDistance.forEach { (trail, dist) ->
-                val trailName = trail.attributes["Trail_Name"] ?: trail.attributes["Name"] ?: "Unknown Trail"
+                val trailName =
+                    trail.attributes["Trail_Name"] ?: trail.attributes["Name"] ?: "Unknown Trail"
                 Log.d("ArcGIS", "Trail Result: $trailName is ${"%.2f".format(dist)} ft away")
             }
         }
@@ -244,7 +258,8 @@ fun ParkMap(
         val target = selectedParkName ?: return@LaunchedEffect
         val currentMap = map ?: return@LaunchedEffect
         if (uniqueParkViewPoints.isEmpty()) return@LaunchedEffect
-        val match = uniqueParkViewPoints.firstOrNull { it.name.equals(target, ignoreCase = true) } ?: return@LaunchedEffect
+        val match = uniqueParkViewPoints.firstOrNull { it.name.equals(target, ignoreCase = true) }
+            ?: return@LaunchedEffect
         currentMap.operationalLayers.forEach { lyr ->
             val fl = lyr as? FeatureLayer ?: return@forEach
             if (fl.name.contains("parkbound", ignoreCase = true)) {
@@ -265,6 +280,12 @@ fun ParkMap(
         }.onSuccess { result ->
             map = result.map
             uniqueParkViewPoints = result.parkViewpoints
+
+            renderPicnicPavilionIcons(
+                context = context,
+                map = result.map,
+                overlay = facilityIconOverlay
+            )
         }.onFailure { e ->
             Log.e("Arcgis", "Error loading: ${e.message}", e)
         }
@@ -279,14 +300,14 @@ fun ParkMap(
                 arcGISMap = arcGISMap,
                 locationDisplay = locationDisplay,
                 mapViewProxy = mapViewProxy,
-                graphicsOverlays = listOf(bufferOverlay),
+                graphicsOverlays = listOf(bufferOverlay, facilityIconOverlay),
                 onSingleTapConfirmed = { tapEvent ->
                     scope.launch {
                         try {
                             arcGISMap.operationalLayers.forEach { (it as? FeatureLayer)?.clearSelection() }
 
-                            launch {findNearbyAmenities()}
-                            launch {findNearbyTrails()}
+                            launch { findNearbyAmenities() }
+                            launch { findNearbyTrails() }
 
                             val results = mapViewProxy.identifyLayers(
                                 screenCoordinate = tapEvent.screenCoordinate,
@@ -294,23 +315,54 @@ fun ParkMap(
                                 returnPopupsOnly = false
                             ).getOrThrow()
                             results.forEach { result ->
-                                val layer = result.layerContent as? FeatureLayer
-                                val layerName = layer?.name ?: ""
-                                val firstElement = result.geoElements.firstOrNull() as? ArcGISFeature
-                                if (firstElement != null) {
-                                    if (!layerName.contains("parkboundriesqa_parkboundries", ignoreCase = true)) {
-                                        layer?.selectFeature(firstElement)
-                                        Log.d("arcgis", "clicked: ${firstElement.attributes["Trail_Name"]} in $layerName")
-                                    }
-                                    if (layer != null && layerName.contains("facility", ignoreCase = true)) {
-                                        val facilityFilterName = (firstElement.attributes["Facility"] as? String) ?: (firstElement.attributes["Facility_Name"] as? String)
-                                        if (!facilityFilterName.isNullOrBlank()) {
-                                            lastFacilityQueried = facilityFilterName
-                                            facilityCounts = getFeatureCountsBySubAssetClientSide(layer, facilityFilterName)
-                                        }
+                                Log.d("arcgis", "There is a result for ${result.layerContent.name}")
+
+                                val layerResult = results.firstOrNull() ?: return@forEach
+
+                                val feature =
+                                    layerResult.geoElements.firstOrNull() as? ArcGISFeature
+                                        ?: return@forEach
+                                val featureLayer =
+                                    layerResult.layerContent as? FeatureLayer ?: return@forEach
+
+                                Log.d(
+                                    "arcgis",
+                                    "You clicked on ${feature.attributes} on the ${featureLayer.name}"
+                                )
+
+                                featureLayer.clearSelection()
+
+                                if (!result.layerContent.name.equals(
+                                        "NYS_Park_Polygon",
+                                        ignoreCase = true
+                                    )
+                                ) {
+                                    featureLayer.selectFeature(feature)
+
+
+                                    Log.d(
+                                        "selected feature result",
+                                        "selected feature result${feature.attributes}"
+                                    )
+
+                                }
+
+
+                                if (featureLayer.name.contains("facility", ignoreCase = true)) {
+                                    val facilityFilterName =
+                                        (feature.attributes["Facility"] as? String)
+                                            ?: (feature.attributes["Facility_Name"] as? String)
+
+                                    if (!facilityFilterName.isNullOrBlank()) {
+                                        lastFacilityQueried = facilityFilterName
+                                        facilityCounts = getFeatureCountsBySubAssetClientSide(
+                                            featureLayer,
+                                            facilityFilterName
+                                        )
                                     }
                                 }
                             }
+
                         } catch (e: Exception) {
                             Log.e("ArcGIS_Identify", "Identify failed: ${e.message}")
                         }
@@ -331,13 +383,14 @@ fun ParkMap(
                 scope.launch {
                     try {
                         isSyncing = true
-                        val syncMap = mapOf(
-                            "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/ParkBoundriesQA/FeatureServer" to "parkBoundriesQA.geodatabase",
-                            "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/TrailsQA/FeatureServer" to "trailsQA.geodatabase",
-                            "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/Facility_FeaturesQA/FeatureServer" to "facility_featuresQA1.geodatabase",
-                            "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/HuntingQA/FeatureServer" to "huntingQA.geodatabase",
+
+                        val syncMapQA = mapOf(
+                             "https://services.arcgis.com/1xFZPtKn1wKC6POA/arcgis/rest/services/NY_State_Parks_Property_Parks_App_View/FeatureServer" to "boundaryQA.geodatabase",
+                            "https://services.arcgis.com/1xFZPtKn1wKC6POA/arcgis/rest/services/NY_State_Parks_Trails_Parks_App_View/FeatureServer" to "trailsQA1.geodatabase",
+                            // "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/Facility_FeaturesQA/FeatureServer" to "facility_featuresQA1.geodatabase",
+                            //  "https://nysgeohub-dev.ny.gov/host/rest/services/Hosted/HuntingQA/FeatureServer" to "huntingQA.geodatabase",
                         )
-                        syncMap.forEach { (serviceUrl, filename) ->
+                        syncMapQA.forEach { (serviceUrl, filename) ->
                             val syncTask = GeodatabaseSyncTask(serviceUrl)
                             val gdbFile = File(context.filesDir, filename)
                             val geodatabase = Geodatabase(gdbFile.absolutePath)
@@ -377,6 +430,69 @@ private suspend fun getFeatureCountsBySubAssetClientSide(featureLayer: FeatureLa
         counts[subAsset] = (counts[subAsset] ?: 0) + 1
     }
     return counts
+}
+
+private suspend fun loadPicnicPavilionSymbol(
+    context: android.content.Context
+): PictureMarkerSymbol {
+    val drawable = ContextCompat.getDrawable(context, gov.ny.its.arcGisReplicaPOC.R.drawable.picnic_pavilion)
+        ?: throw IllegalArgumentException("Drawable resource not found")
+
+    val bitmapDrawable = if (drawable is BitmapDrawable) {
+        drawable
+    } else {
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth.coerceAtLeast(1),
+            drawable.intrinsicHeight.coerceAtLeast(1),
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        BitmapDrawable(context.resources, bitmap)
+    }
+
+    val symbol = PictureMarkerSymbol.createWithImage(bitmapDrawable)
+    symbol.load().getOrThrow()
+    symbol.width = 28f
+    symbol.height = 28f
+    symbol.offsetY = 10f
+    return symbol
+}
+
+private suspend fun renderPicnicPavilionIcons(
+    context: android.content.Context,
+    map: ArcGISMap,
+    overlay: GraphicsOverlay
+) {
+    overlay.graphics.clear()
+
+    val picnicSymbol = loadPicnicPavilionSymbol(context)
+
+    map.operationalLayers
+        .filterIsInstance<FeatureLayer>()
+        .filter { it.name.contains("facility", ignoreCase = true) }
+        .forEach { layer ->
+
+            val table = layer.featureTable ?: return@forEach
+
+            val query = QueryParameters().apply {
+                whereClause = """
+                    UPPER(Sub_Asset) = 'PICNIC_PAVILION'
+                    OR UPPER(Sub_Asset) = 'PICNIC PAVILION'
+                    OR UPPER(Facility) = 'PICNIC_PAVILION'
+                    OR UPPER(Facility) = 'PICNIC PAVILION'
+                """.trimIndent()
+            }
+
+            val result = table.queryFeatures(query).getOrThrow()
+
+            result.forEach { element ->
+                val feature = element as? ArcGISFeature ?: return@forEach
+                val point = feature.geometry as? com.arcgismaps.geometry.Point ?: return@forEach
+                overlay.graphics.add(Graphic(point, picnicSymbol))
+            }
+        }
 }
 
 fun findNearestFeature(
